@@ -5,6 +5,7 @@ export default function BadmintonScheduler() {
   // State
   // -----------------------------
   const [namesInput, setNamesInput] = useState("");
+  const [newSavedNameInput, setNewSavedNameInput] = useState("");
   const [participants, setParticipants] = useState([]); // 대기 인원(개인)
   const [teamQueue, setTeamQueue] = useState([]); // 대기 팀(배열의 배열)
   const [courts, setCourts] = useState([{ id: 1, name: "코트 1" }, { id: 2, name: "코트 2" }]);
@@ -13,6 +14,7 @@ export default function BadmintonScheduler() {
   const [priorityCarry, setPriorityCarry] = useState([]); // 직전 라운드에서 남은 1~3명
   const [restOnce, setRestOnce] = useState([]); // "쉼"으로 표시되어 다음 1회 팀짜기에서 제외할 인원
   const [playedCount, setPlayedCount] = useState({}); // { [name]: number } — 누적 경기 수
+  const [savedNames, setSavedNames] = useState([]); // 자동완성용 데이터
 
   // 🔵 코트 비활성(수동 ON/OFF)
   const [disabledCourtsOnce, setDisabledCourtsOnce] = useState([]); // number[]
@@ -117,6 +119,7 @@ export default function BadmintonScheduler() {
       const s = JSON.parse(raw);
       if (Array.isArray(s.participants)) setParticipants(s.participants);
       if (Array.isArray(s.teamQueue)) setTeamQueue(s.teamQueue);
+      if (Array.isArray(s.savedNames)) setSavedNames(s.savedNames);
       if (Array.isArray(s.courts)) {
         // 과거 저장분 호환: name 없으면 기본값 부여
         const normalized = s.courts.map((c, idx) => ({
@@ -423,6 +426,40 @@ export default function BadmintonScheduler() {
     const returned = [...participants, ...finishedTeam];
     setParticipants(returned);
     setCourts(nextCourts);
+  }
+
+  function handleExportSavedNames() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ savedNames }));
+    const downloadAnchorNode = document.createElement("a");
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "badminton_autocomplete.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  }
+
+  function handleImportSavedNames(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const parsed = JSON.parse(evt.target.result);
+        if (parsed && Array.isArray(parsed.savedNames)) {
+          setSavedNames((prev) => {
+            const merged = [...prev, ...parsed.savedNames];
+            return uniquePreserveOrder(merged);
+          });
+          alert("자동완성 데이터를 불러왔습니다.");
+        } else {
+          alert("올바른 파일 형식이 아닙니다.");
+        }
+      } catch (err) {
+        alert("파일 읽기 오류: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ""; // 동일한 파일 재업로드 가능하도록 초기화
   }
 
   function handleResetAll() {
@@ -761,7 +798,7 @@ export default function BadmintonScheduler() {
           <div className="bg-white rounded-2xl shadow p-4">
             <h2 className="font-semibold mb-2">① 인원 입력 (엔터로 구분)</h2>
             <textarea
-              className="w-full h-40 p-3 border rounded-xl focus:outline-none focus:ring"
+              className="w-full h-24 p-3 border rounded-xl focus:outline-none focus:ring"
               placeholder={`예)\n김철수\n이영희\n...`}
               value={namesInput}
               onChange={(e) => setNamesInput(e.target.value)}
@@ -791,6 +828,70 @@ export default function BadmintonScheduler() {
             <p className="text-xs text-gray-500 mt-2">
               Enter로 추가, 줄바꿈은 Shift+Enter. 이미 대기/코트/대기팀에 있는 이름은 무시됩니다.
             </p>
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold">저장된 멤버 (클릭하여 추가)</h3>
+                <div className="flex gap-2">
+                  <button
+                    className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs"
+                    onClick={handleExportSavedNames}
+                  >
+                    내보내기
+                  </button>
+                  <label className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs cursor-pointer">
+                    불러오기
+                    <input type="file" accept=".json" className="hidden" onChange={handleImportSavedNames} />
+                  </label>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {savedNames.map((name, idx) => (
+                  <div key={idx} className="flex items-center bg-gray-100 rounded-full px-3 py-1">
+                    <span
+                      className="cursor-pointer text-sm hover:text-blue-600"
+                      onClick={() => setNamesInput((prev) => (prev ? prev + "\n" + name : name))}
+                    >
+                      {name}
+                    </span>
+                    <button
+                      className="ml-2 text-gray-400 hover:text-red-500 text-xs"
+                      onClick={() => setSavedNames((prev) => prev.filter((n) => n !== name))}
+                    >
+                      X
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className="flex-1 p-2 border rounded-xl text-sm"
+                  placeholder="새 멤버 이름"
+                  value={newSavedNameInput}
+                  onChange={(e) => setNewSavedNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (newSavedNameInput.trim() && !savedNames.includes(newSavedNameInput.trim())) {
+                        setSavedNames((prev) => [...prev, newSavedNameInput.trim()]);
+                        setNewSavedNameInput("");
+                      }
+                    }
+                  }}
+                />
+                <button
+                  className="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded-xl text-sm"
+                  onClick={() => {
+                    if (newSavedNameInput.trim() && !savedNames.includes(newSavedNameInput.trim())) {
+                      setSavedNames((prev) => [...prev, newSavedNameInput.trim()]);
+                      setNewSavedNameInput("");
+                    }
+                  }}
+                >
+                  추가
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl shadow p-4">
