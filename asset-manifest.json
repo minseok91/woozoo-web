@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/woozoo-web/static/css/main.5fcec064.css",
-    "main.js": "/woozoo-web/static/js/main.bc2674fc.js",
+    "main.css": "/woozoo-web/static/css/main.20d469ab.css",
+    "main.js": "/woozoo-web/static/js/main.752b7ec3.js",
     "static/js/453.6f698a1b.chunk.js": "/woozoo-web/static/js/453.6f698a1b.chunk.js",
     "index.html": "/woozoo-web/index.html",
-    "main.5fcec064.css.map": "/woozoo-web/static/css/main.5fcec064.css.map",
-    "main.bc2674fc.js.map": "/woozoo-web/static/js/main.bc2674fc.js.map",
+    "main.20d469ab.css.map": "/woozoo-web/static/css/main.20d469ab.css.map",
+    "main.752b7ec3.js.map": "/woozoo-web/static/js/main.752b7ec3.js.map",
     "453.6f698a1b.chunk.js.map": "/woozoo-web/static/js/453.6f698a1b.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.5fcec064.css",
-    "static/js/main.bc2674fc.js"
+    "static/css/main.20d469ab.css",
+    "static/js/main.752b7ec3.js"
   ]
 }
